@@ -1,0 +1,27 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Правила для коллекции пользователей
+    match /users/{userId} {
+      // Пользователь может читать свой профиль
+      // Другие аутентифицированные пользователи могут читать только имя и статистику
+      allow read: if request.auth != null && (
+        request.auth.uid == userId || 
+        request.resource.data.keys().hasOnly(['name', 'totalFlights', 'totalAirTime'])
+      );
+      
+      // Только сам пользователь может изменять свой профиль
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Правила для коллекции рейсов (будут расширены на следующем этапе)
+    match /flights/{flightId} {
+      // Все аутентифицированные пользователи могут читать рейсы
+      allow read: if request.auth != null;
+      
+      // Только владелец может создавать, обновлять и удалять рейсы
+      allow create: if request.auth != null && request.resource.data.user_id == request.auth.uid;
+      allow update, delete: if request.auth != null && resource.data.user_id == request.auth.uid;
+    }
+  }
+}
