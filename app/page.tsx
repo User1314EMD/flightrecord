@@ -33,16 +33,8 @@ export default function Home() {
     }
   };
 
-  // Если загрузка, показываем индикатор загрузки
-  if (loading) {
-    return (
-      <main className="flex min-h-screen flex-col items-center justify-center p-24">
-        <div className="text-center">
-          <p className="text-xl">Загрузка...</p>
-        </div>
-      </main>
-    );
-  }
+  // Показываем контент сразу, даже если идет загрузка
+  // Это улучшает воспринимаемую скорость загрузки
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-center p-24">
