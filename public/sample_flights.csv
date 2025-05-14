@@ -1,0 +1,4 @@
+flight_number,airline,departure_city,arrival_city,departure_date,departure_time,arrival_date,arrival_time,aircraft_type,seat_number
+SU1234,Аэрофлот,Москва,Санкт-Петербург,2023-01-01,10:00,2023-01-01,11:30,Boeing 737,12A
+S71234,S7 Airlines,Москва,Сочи,2023-02-15,14:30,2023-02-15,17:00,Airbus A320,15B
+U61234,Уральские авиалинии,Екатеринбург,Москва,2023-03-20,08:45,2023-03-20,10:15,Airbus A321,21C

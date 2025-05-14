@@ -25,7 +25,7 @@ import {
   CardHeader,
   CardTitle
 } from "../../src/components/ui/card";
-import { PlusCircle, Loader2 } from "lucide-react";
+import { PlusCircle, Loader2, Upload } from "lucide-react";
 
 export default function FlightsPage() {
   const router = useRouter();
@@ -91,6 +91,12 @@ export default function FlightsPage() {
               className="bg-green-600 hover:bg-green-700"
             >
               <PlusCircle className="mr-2 h-4 w-4" /> Добавить рейс
+            </Button>
+            <Button
+              onClick={() => router.push("/flights/import")}
+              variant="outline"
+            >
+              <Upload className="mr-2 h-4 w-4" /> Импорт из CSV
             </Button>
             <Button onClick={() => router.push("/")}>На главную</Button>
           </div>
