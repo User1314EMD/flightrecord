@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
@@ -26,11 +26,13 @@ import {
   CardTitle
 } from "../../src/components/ui/card";
 import { PlusCircle, Loader2, Upload } from "lucide-react";
+import FlightFilters from "../../src/components/flights/FlightFilters";
 
 export default function FlightsPage() {
   const router = useRouter();
   const { user } = useAuth();
   const [flights, setFlights] = useState<Flight[]>([]);
+  const [filteredFlights, setFilteredFlights] = useState<Flight[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -49,6 +51,7 @@ export default function FlightsPage() {
         // Получаем рейсы из локального хранилища
         const userFlights = getLocalUserFlights(user.uid);
         setFlights(userFlights);
+        setFilteredFlights(userFlights);
       } catch (error) {
         console.error("Ошибка при загрузке рейсов:", error);
         toast.error("Не удалось загрузить рейсы");
@@ -59,6 +62,11 @@ export default function FlightsPage() {
 
     loadFlights();
   }, [user]);
+
+  // Обработчик изменения фильтров - используем useCallback для стабильности ссылки
+  const handleFilterChange = useCallback((newFilteredFlights: Flight[]) => {
+    setFilteredFlights(newFilteredFlights);
+  }, []);
 
   const handleDeleteFlight = async (flightId: string) => {
     if (!confirm("Вы уверены, что хотите удалить этот рейс?")) return;
@@ -102,11 +110,17 @@ export default function FlightsPage() {
           </div>
         </div>
 
+        {/* Компонент фильтрации */}
+        <FlightFilters
+          flights={flights}
+          onFilterChange={handleFilterChange}
+        />
+
         <Card>
           <CardHeader>
             <CardTitle>Список рейсов</CardTitle>
             <CardDescription>
-              Всего рейсов: {loading ? "..." : flights.length}
+              Всего рейсов: {loading ? "..." : filteredFlights.length} {filteredFlights.length !== flights.length && `(отфильтровано из ${flights.length})`}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -125,6 +139,19 @@ export default function FlightsPage() {
                   <PlusCircle className="mr-2 h-4 w-4" /> Добавить первый рейс
                 </Button>
               </div>
+            ) : filteredFlights.length === 0 ? (
+              <div className="text-center py-10">
+                <p className="text-lg mb-4">Нет рейсов, соответствующих фильтрам</p>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    // Сбрасываем фильтры, показывая все рейсы
+                    handleFilterChange(flights);
+                  }}
+                >
+                  Сбросить фильтры
+                </Button>
+              </div>
             ) : (
               <div className="overflow-x-auto">
                 <Table>
@@ -139,7 +166,7 @@ export default function FlightsPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {flights.map((flight) => (
+                    {filteredFlights.map((flight) => (
                       <TableRow key={flight.id}>
                         <TableCell className="font-medium">
                           {flight.airline} {flight.flight_number}
