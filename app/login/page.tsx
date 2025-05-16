@@ -31,9 +31,13 @@ const loginSchema = z.object({
 
 type LoginFormValues = z.infer<typeof loginSchema>;
 
+// Импортируем контекст аутентификации
+import { useAuth } from "../../src/context/AuthContext";
+
 export default function LoginPage() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
+  const { setUser } = useAuth();
 
   // Инициализация формы с валидацией
   const form = useForm<LoginFormValues>({
@@ -52,8 +56,18 @@ export default function LoginPage() {
       // Динамический импорт функции аутентификации
       const { signIn } = await import("../../src/lib/firebase/auth");
       await signIn(data.email, data.password);
+
+      // Импортируем функцию для получения пользователя
+      const { getCurrentUser } = await import("../../src/lib/firebase/auth");
+      const user = await getCurrentUser();
+
+      // Устанавливаем пользователя в контекст
+      setUser(user);
+
       toast.success("Вход выполнен успешно!");
-      router.push("/");
+
+      // Перенаправляем на страницу рейсов
+      router.push("/flights");
     } catch (error: any) {
       console.error("Ошибка при входе:", error);
 

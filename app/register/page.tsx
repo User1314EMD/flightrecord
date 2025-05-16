@@ -34,9 +34,13 @@ const registerSchema = z.object({
 
 type RegisterFormValues = z.infer<typeof registerSchema>;
 
+// Импортируем контекст аутентификации
+import { useAuth } from "../../src/context/AuthContext";
+
 export default function RegisterPage() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
+  const { setUser } = useAuth();
 
   // Инициализация формы с валидацией
   const form = useForm<RegisterFormValues>({
@@ -56,8 +60,18 @@ export default function RegisterPage() {
       // Динамический импорт функции регистрации
       const { registerUser } = await import("../../src/lib/firebase/auth");
       await registerUser(data.email, data.password, data.name);
+
+      // Импортируем функцию для получения пользователя
+      const { getCurrentUser } = await import("../../src/lib/firebase/auth");
+      const user = await getCurrentUser();
+
+      // Устанавливаем пользователя в контекст
+      setUser(user);
+
       toast.success("Регистрация успешна!");
-      router.push("/");
+
+      // Перенаправляем на страницу рейсов
+      router.push("/flights");
     } catch (error: any) {
       console.error("Ошибка при регистрации:", error);
 

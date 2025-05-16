@@ -13,7 +13,7 @@ const Button = dynamic(() => import("../src/components/ui/button").then(mod => m
 import { useAuth } from "../src/context/AuthContext";
 
 export default function Home() {
-  const { user, loading } = useAuth();
+  const { user, loading, setUser } = useAuth();
   const router = useRouter();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
@@ -24,6 +24,13 @@ export default function Home() {
       // Динамический импорт функции выхода
       const { signOut } = await import("../src/lib/firebase/auth");
       await signOut();
+
+      // Сохраняем состояние в localStorage
+      localStorage.setItem('auth_state', 'logged_out');
+
+      // Обновляем состояние пользователя в контексте
+      setUser(null);
+
       toast.success("Вы вышли из аккаунта");
     } catch (error) {
       console.error("Ошибка при выходе:", error);
