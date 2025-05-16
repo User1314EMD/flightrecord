@@ -25,7 +25,7 @@ import {
   CardHeader,
   CardTitle
 } from "../../src/components/ui/card";
-import { PlusCircle, Loader2, Upload } from "lucide-react";
+import { PlusCircle, Loader2, Upload, User as UserIcon } from "lucide-react";
 import FlightFilters from "../../src/components/flights/FlightFilters";
 
 export default function FlightsPage() {
@@ -105,6 +105,12 @@ export default function FlightsPage() {
               variant="outline"
             >
               <Upload className="mr-2 h-4 w-4" /> Импорт из CSV
+            </Button>
+            <Button
+              onClick={() => router.push("/users")}
+              className="bg-purple-600 hover:bg-purple-700"
+            >
+              <UserIcon className="mr-2 h-4 w-4" /> Поиск пользователей
             </Button>
             <Button onClick={() => router.push("/")}>На главную</Button>
           </div>

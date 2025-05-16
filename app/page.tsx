@@ -71,17 +71,17 @@ export default function Home() {
                 Мои рейсы
               </Button>
               <Button
+                onClick={() => router.push('/users')}
+                className="bg-purple-600 hover:bg-purple-700"
+              >
+                Поиск пользователей
+              </Button>
+              <Button
                 onClick={handleSignOut}
                 variant="outline"
                 disabled={isLoggingOut}
               >
                 {isLoggingOut ? "Выход..." : "Выйти"}
-              </Button>
-              <Button
-                onClick={() => router.push('/test-protected')}
-                className="bg-green-600 hover:bg-green-700 mt-2 w-full"
-              >
-                Проверить защищенный маршрут
               </Button>
             </div>
           </div>
