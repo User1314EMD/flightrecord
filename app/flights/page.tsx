@@ -42,14 +42,14 @@ export default function FlightsPage() {
       try {
         setLoading(true);
 
-        // Импортируем функции для работы с локальным хранилищем
-        const { getLocalUserFlights, initializeTestData } = await import("../../src/lib/local-storage");
+        // Импортируем функции для работы с Firebase
+        const { getLocalUserFlights, initializeTestData } = await import("../../src/lib/firebase-adapter");
 
         // Инициализируем тестовые данные, если нет рейсов
-        initializeTestData(user.uid);
+        await initializeTestData(user.uid);
 
-        // Получаем рейсы из локального хранилища
-        const userFlights = getLocalUserFlights(user.uid);
+        // Получаем рейсы из Firebase
+        const userFlights = await getLocalUserFlights(user.uid);
         setFlights(userFlights);
         setFilteredFlights(userFlights);
       } catch (error) {
@@ -72,14 +72,15 @@ export default function FlightsPage() {
     if (!confirm("Вы уверены, что хотите удалить этот рейс?")) return;
 
     try {
-      // Импортируем функцию для удаления из локального хранилища
-      const { deleteLocalFlight } = await import("../../src/lib/local-storage");
+      // Импортируем функцию для удаления из Firebase
+      const { deleteLocalFlight } = await import("../../src/lib/firebase-adapter");
 
-      // Удаляем рейс из локального хранилища
-      deleteLocalFlight(flightId);
+      // Удаляем рейс из Firebase
+      await deleteLocalFlight(flightId);
 
       // Обновляем состояние
       setFlights(flights.filter(flight => flight.id !== flightId));
+      setFilteredFlights(filteredFlights.filter(flight => flight.id !== flightId));
 
       toast.success("Рейс успешно удален");
     } catch (error) {

@@ -135,11 +135,11 @@ export default function EditFlightPage({ params }: { params: { id: string } }) {
       try {
         setLoading(true);
 
-        // Импортируем функцию для получения рейса из локального хранилища
-        const { getLocalFlightById } = await import("../../../../src/lib/local-storage");
+        // Импортируем функцию для получения рейса из Firebase
+        const { getLocalFlightById } = await import("../../../../src/lib/firebase-adapter");
 
-        // Получаем рейс из локального хранилища
-        const flightData = getLocalFlightById(params.id);
+        // Получаем рейс из Firebase
+        const flightData = await getLocalFlightById(params.id);
 
         if (!flightData) {
           toast.error("Рейс не найден");
@@ -231,11 +231,11 @@ export default function EditFlightPage({ params }: { params: { id: string } }) {
         seat_number: data.seat_number || undefined,
       };
 
-      // Импортируем функцию для обновления в локальном хранилище
-      const { updateLocalFlight } = await import("../../../../src/lib/local-storage");
+      // Импортируем функцию для обновления в Firebase
+      const { updateLocalFlight } = await import("../../../../src/lib/firebase-adapter");
 
-      // Обновляем рейс в локальном хранилище
-      updateLocalFlight(flight.id!, flightData);
+      // Обновляем рейс в Firebase
+      await updateLocalFlight(flight.id!, flightData);
 
       toast.success("Рейс успешно обновлен");
       router.push(`/flights/${flight.id}`);

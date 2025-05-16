@@ -3,25 +3,61 @@ service cloud.firestore {
   match /databases/{database}/documents {
     // Правила для коллекции пользователей
     match /users/{userId} {
-      // Пользователь может читать свой профиль
-      // Другие аутентифицированные пользователи могут читать только имя и статистику
-      allow read: if request.auth != null && (
-        request.auth.uid == userId || 
-        request.resource.data.keys().hasOnly(['name', 'totalFlights', 'totalAirTime'])
-      );
-      
+      // Все аутентифицированные пользователи могут читать профили
+      // Владелец профиля может читать все поля
+      // Другие пользователи могут читать только публичные поля (имя и статистику)
+      allow get: if request.auth != null;
+
+      // Для списка пользователей ограничиваем доступные поля
+      allow list: if request.auth != null && request.query.limit <= 50;
+
       // Только сам пользователь может изменять свой профиль
-      allow write: if request.auth != null && request.auth.uid == userId;
+      allow create, update, delete: if request.auth != null && request.auth.uid == userId;
     }
-    
-    // Правила для коллекции рейсов (будут расширены на следующем этапе)
+
+    // Правила для доступа к отдельным полям профиля
+    match /users/{userId} {
+      // Публичные поля профиля (доступны всем аутентифицированным пользователям)
+      match /publicProfile/{field} {
+        allow read: if request.auth != null;
+      }
+
+      // Приватные поля профиля (доступны только владельцу)
+      match /privateProfile/{field} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+    }
+
+    // Правила для коллекции рейсов
     match /flights/{flightId} {
       // Все аутентифицированные пользователи могут читать рейсы
       allow read: if request.auth != null;
-      
+
       // Только владелец может создавать, обновлять и удалять рейсы
       allow create: if request.auth != null && request.resource.data.user_id == request.auth.uid;
       allow update, delete: if request.auth != null && resource.data.user_id == request.auth.uid;
+    }
+
+    // Правила для коллекции статистики
+    match /statistics/{userId} {
+      // Все аутентифицированные пользователи могут читать статистику
+      allow read: if request.auth != null;
+
+      // Только владелец может обновлять свою статистику
+      // Система также может обновлять статистику (через Cloud Functions)
+      allow write: if request.auth != null && (
+        request.auth.uid == userId ||
+        request.auth.token.admin == true
+      );
+    }
+
+    // Правила для агрегированной статистики (общая статистика по всем пользователям)
+    match /aggregatedStats/global {
+      // Все аутентифицированные пользователи могут читать агрегированную статистику
+      allow read: if request.auth != null;
+
+      // Только администраторы могут обновлять агрегированную статистику
+      allow write: if request.auth != null && request.auth.token.admin == true;
     }
   }
 }

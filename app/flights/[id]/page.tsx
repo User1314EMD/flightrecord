@@ -31,11 +31,11 @@ export default function FlightDetailsPage({ params }: { params: { id: string } }
       try {
         setLoading(true);
 
-        // Импортируем функцию для получения рейса из локального хранилища
-        const { getLocalFlightById } = await import("../../../src/lib/local-storage");
+        // Импортируем функцию для получения рейса из Firebase
+        const { getLocalFlightById } = await import("../../../src/lib/firebase-adapter");
 
-        // Получаем рейс из локального хранилища
-        const flightData = getLocalFlightById(params.id);
+        // Получаем рейс из Firebase
+        const flightData = await getLocalFlightById(params.id);
 
         if (!flightData) {
           toast.error("Рейс не найден");
@@ -68,11 +68,11 @@ export default function FlightDetailsPage({ params }: { params: { id: string } }
     if (!confirm("Вы уверены, что хотите удалить этот рейс?")) return;
 
     try {
-      // Импортируем функцию для удаления из локального хранилища
-      const { deleteLocalFlight } = await import("../../../src/lib/local-storage");
+      // Импортируем функцию для удаления из Firebase
+      const { deleteLocalFlight } = await import("../../../src/lib/firebase-adapter");
 
-      // Удаляем рейс из локального хранилища
-      deleteLocalFlight(flight.id!);
+      // Удаляем рейс из Firebase
+      await deleteLocalFlight(flight.id!);
 
       toast.success("Рейс успешно удален");
       router.push("/flights");

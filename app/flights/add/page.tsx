@@ -126,11 +126,11 @@ export default function AddFlightPage() {
 
       console.log("Данные рейса для сохранения:", flightData);
 
-      // Импортируем функцию для добавления в локальное хранилище
-      const { addLocalFlight } = await import("../../../src/lib/local-storage");
+      // Импортируем функцию для добавления в Firebase
+      const { addLocalFlight } = await import("../../../src/lib/firebase-adapter");
 
-      // Добавляем рейс в локальное хранилище
-      const flightId = addLocalFlight(flightData);
+      // Добавляем рейс в Firebase
+      const flightId = await addLocalFlight(flightData);
       console.log("Рейс успешно добавлен с ID:", flightId);
 
       toast.success("Рейс успешно добавлен");

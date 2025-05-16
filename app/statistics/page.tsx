@@ -57,17 +57,17 @@ export default function StatisticsPage() {
       try {
         setLoading(true);
 
-        // Импортируем функцию для получения рейсов
-        const { getLocalUserFlights } = await import("../../src/lib/local-storage");
-        
-        // Получаем рейсы пользователя
-        const userFlights = getLocalUserFlights(user.uid);
-        
+        // Импортируем функцию для получения рейсов из Firebase
+        const { getLocalUserFlights } = await import("../../src/lib/firebase-adapter");
+
+        // Получаем рейсы пользователя из Firebase
+        const userFlights = await getLocalUserFlights(user.uid);
+
         // Сортируем рейсы по дате вылета (от новых к старым)
         const sortedFlights = [...userFlights].sort(
           (a, b) => b.departure_time_local.getTime() - a.departure_time_local.getTime()
         );
-        
+
         setFlights(sortedFlights);
       } catch (error) {
         console.error("Ошибка при загрузке рейсов:", error);
@@ -94,19 +94,19 @@ export default function StatisticsPage() {
   const formatAirTime = (minutes: number): string => {
     const hours = Math.floor(minutes / 60);
     const mins = minutes % 60;
-    
+
     return `${hours} ч ${mins} мин`;
   };
 
   // Данные для графика по авиакомпаниям
   const getAirlineData = () => {
     const airlineCounts: Record<string, number> = {};
-    
+
     flights.forEach(flight => {
       const airline = flight.airline;
       airlineCounts[airline] = (airlineCounts[airline] || 0) + 1;
     });
-    
+
     return Object.entries(airlineCounts)
       .map(([name, value]) => ({ name, value }))
       .sort((a, b) => b.value - a.value);
@@ -115,12 +115,12 @@ export default function StatisticsPage() {
   // Данные для графика по городам вылета
   const getDepartureCityData = () => {
     const cityCounts: Record<string, number> = {};
-    
+
     flights.forEach(flight => {
       const city = flight.departure_city;
       cityCounts[city] = (cityCounts[city] || 0) + 1;
     });
-    
+
     return Object.entries(cityCounts)
       .map(([name, value]) => ({ name, value }))
       .sort((a, b) => b.value - a.value);
@@ -129,12 +129,12 @@ export default function StatisticsPage() {
   // Данные для графика по городам прилета
   const getArrivalCityData = () => {
     const cityCounts: Record<string, number> = {};
-    
+
     flights.forEach(flight => {
       const city = flight.arrival_city;
       cityCounts[city] = (cityCounts[city] || 0) + 1;
     });
-    
+
     return Object.entries(cityCounts)
       .map(([name, value]) => ({ name, value }))
       .sort((a, b) => b.value - a.value);
@@ -143,12 +143,12 @@ export default function StatisticsPage() {
   // Данные для графика по типам самолетов
   const getAircraftTypeData = () => {
     const typeCounts: Record<string, number> = {};
-    
+
     flights.forEach(flight => {
       const type = flight.aircraft_type || "Неизвестно";
       typeCounts[type] = (typeCounts[type] || 0) + 1;
     });
-    
+
     return Object.entries(typeCounts)
       .map(([name, value]) => ({ name, value }))
       .sort((a, b) => b.value - a.value);
@@ -161,25 +161,25 @@ export default function StatisticsPage() {
       "Январь", "Февраль", "Март", "Апрель", "Май", "Июнь",
       "Июль", "Август", "Сентябрь", "Октябрь", "Ноябрь", "Декабрь"
     ];
-    
+
     flights.forEach(flight => {
       const date = flight.departure_time_local;
       const monthYear = `${monthNames[date.getMonth()]} ${date.getFullYear()}`;
       monthCounts[monthYear] = (monthCounts[monthYear] || 0) + 1;
     });
-    
+
     // Сортируем по дате
     const sortedMonths = Object.keys(monthCounts).sort((a, b) => {
       const [aMonth, aYear] = a.split(' ');
       const [bMonth, bYear] = b.split(' ');
-      
+
       if (aYear !== bYear) {
         return parseInt(aYear) - parseInt(bYear);
       }
-      
+
       return monthNames.indexOf(aMonth) - monthNames.indexOf(bMonth);
     });
-    
+
     return sortedMonths.map(month => ({
       name: month,
       flights: monthCounts[month]
@@ -189,12 +189,12 @@ export default function StatisticsPage() {
   // Данные для графика маршрутов
   const getRouteData = () => {
     const routeCounts: Record<string, number> = {};
-    
+
     flights.forEach(flight => {
       const route = `${flight.departure_city} → ${flight.arrival_city}`;
       routeCounts[route] = (routeCounts[route] || 0) + 1;
     });
-    
+
     return Object.entries(routeCounts)
       .map(([name, value]) => ({ name, value }))
       .sort((a, b) => b.value - a.value)
@@ -489,7 +489,7 @@ export default function StatisticsPage() {
                   <CardContent>
                     <div className="space-y-4">
                       {flights.map((flight, index) => (
-                        <div 
+                        <div
                           key={flight.id || index}
                           className="border-l-4 border-primary pl-4 pb-4 relative"
                         >

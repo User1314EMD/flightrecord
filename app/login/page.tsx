@@ -53,16 +53,18 @@ export default function LoginPage() {
     setIsLoading(true);
 
     try {
+      console.log("Начинаем вход с данными:", { email: data.email });
+
       // Динамический импорт функции аутентификации
       const { signIn } = await import("../../src/lib/firebase/auth");
-      await signIn(data.email, data.password);
+      console.log("Функция signIn импортирована, вызываем...");
 
-      // Импортируем функцию для получения пользователя
-      const { getCurrentUser } = await import("../../src/lib/firebase/auth");
-      const user = await getCurrentUser();
+      const user = await signIn(data.email, data.password);
+      console.log("Вход выполнен успешно, получен пользователь:", user);
 
       // Устанавливаем пользователя в контекст
       setUser(user);
+      console.log("Пользователь установлен в контекст");
 
       toast.success("Вход выполнен успешно!");
 
@@ -70,16 +72,22 @@ export default function LoginPage() {
       router.push("/flights");
     } catch (error: any) {
       console.error("Ошибка при входе:", error);
+      console.error("Тип ошибки:", typeof error);
+      console.error("Код ошибки:", error.code);
+      console.error("Сообщение ошибки:", error.message);
 
       // Обработка ошибок Firebase
-      if (error.code === "auth/invalid-credential") {
+      if (error.code === "auth/invalid-credential" ||
+          error.code === "auth/invalid-login-credentials") {
         toast.error("Неверный email или пароль");
       } else if (error.code === "auth/user-not-found") {
         toast.error("Пользователь не найден");
       } else if (error.code === "auth/wrong-password") {
         toast.error("Неверный пароль");
+      } else if (error.code === "auth/network-request-failed") {
+        toast.error("Ошибка сети. Проверьте подключение к интернету.");
       } else {
-        toast.error("Ошибка при входе. Пожалуйста, попробуйте снова.");
+        toast.error(`Ошибка при входе: ${error.message || 'Неизвестная ошибка'}`);
       }
     } finally {
       setIsLoading(false);
