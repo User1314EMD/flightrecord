@@ -71,6 +71,12 @@ export default function Home() {
                 Мои рейсы
               </Button>
               <Button
+                onClick={() => router.push('/statistics')}
+                className="bg-green-600 hover:bg-green-700"
+              >
+                Статистика
+              </Button>
+              <Button
                 onClick={() => router.push('/users')}
                 className="bg-purple-600 hover:bg-purple-700"
               >
