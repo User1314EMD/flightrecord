@@ -27,6 +27,17 @@ import {
   CardHeader,
   CardTitle,
 } from "../../../src/components/ui/card";
+import { Separator } from "../../../src/components/ui/separator";
+import { Alert, AlertDescription, AlertTitle } from "../../../src/components/ui/alert";
+import { InfoIcon, SearchIcon, LoaderIcon } from "lucide-react";
+
+// Схема валидации формы поиска рейса
+const flightLookupSchema = z.object({
+  lookup_flight_number: z.string().min(2, "Введите номер рейса"),
+  lookup_date: z.string().optional(),
+});
+
+type FlightLookupFormValues = z.infer<typeof flightLookupSchema>;
 
 // Схема валидации формы добавления рейса
 const flightSchema = z.object({
@@ -48,6 +59,17 @@ export default function AddFlightPage() {
   const router = useRouter();
   const { user } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLookingUp, setIsLookingUp] = useState(false);
+  const [lookupError, setLookupError] = useState<string | null>(null);
+
+  // Инициализация формы поиска рейса
+  const lookupForm = useForm<FlightLookupFormValues>({
+    resolver: zodResolver(flightLookupSchema),
+    defaultValues: {
+      lookup_flight_number: "",
+      lookup_date: new Date().toISOString().split('T')[0],
+    },
+  });
 
   // Инициализация формы с валидацией
   const form = useForm<FlightFormValues>({
@@ -65,6 +87,77 @@ export default function AddFlightPage() {
       seat_number: "",
     },
   });
+
+  // Функция для поиска информации о рейсе
+  async function onLookup(data: FlightLookupFormValues) {
+    setIsLookingUp(true);
+    setLookupError(null);
+
+    try {
+      console.log('Отправка запроса на поиск рейса:', data);
+
+      // Формируем URL для запроса
+      const url = new URL('/api/flightradar', window.location.origin);
+      url.searchParams.append('flight_number', data.lookup_flight_number);
+
+      if (data.lookup_date) {
+        url.searchParams.append('date', data.lookup_date);
+      }
+
+      console.log('URL запроса:', url.toString());
+
+      // Отправляем запрос к API
+      const response = await fetch(url.toString());
+      console.log('Получен ответ от API:', response.status, response.statusText);
+
+      // Получаем тело ответа
+      const responseText = await response.text();
+      console.log('Тело ответа (первые 100 символов):', responseText.substring(0, 100));
+
+      // Парсим JSON
+      let responseData;
+      try {
+        responseData = JSON.parse(responseText);
+      } catch (e) {
+        console.error('Ошибка при парсинге JSON:', e);
+        throw new Error(`Некорректный формат ответа: ${responseText.substring(0, 100)}...`);
+      }
+
+      // Проверяем статус ответа
+      if (!response.ok) {
+        throw new Error(responseData.error || `Ошибка API: ${response.status} ${response.statusText}`);
+      }
+
+      // Проверяем наличие ошибки в ответе
+      if (responseData.error) {
+        throw new Error(responseData.error);
+      }
+
+      // Получаем данные о рейсе
+      const flightInfo = responseData;
+      console.log('Получены данные о рейсе:', flightInfo);
+
+      // Заполняем форму данными о рейсе
+      form.setValue('flight_number', flightInfo.flight_number || '');
+      form.setValue('airline', flightInfo.airline || '');
+      form.setValue('departure_city', flightInfo.departure_city || '');
+      form.setValue('arrival_city', flightInfo.arrival_city || '');
+      form.setValue('departure_date', flightInfo.departure_date || '');
+      form.setValue('departure_time', flightInfo.departure_time || '');
+      form.setValue('arrival_date', flightInfo.arrival_date || '');
+      form.setValue('arrival_time', flightInfo.arrival_time || '');
+      form.setValue('aircraft_type', flightInfo.aircraft_type || '');
+
+      toast.success('Информация о рейсе успешно получена');
+    } catch (error: any) {
+      console.error('Ошибка при получении информации о рейсе:', error);
+      const errorMessage = error.message || 'Не удалось получить информацию о рейсе';
+      setLookupError(errorMessage);
+      toast.error(`Ошибка: ${errorMessage}`);
+    } finally {
+      setIsLookingUp(false);
+    }
+  }
 
   // Обработчик отправки формы
   async function onSubmit(data: FlightFormValues) {
@@ -152,11 +245,79 @@ export default function AddFlightPage() {
           <Button onClick={() => router.push("/flights")}>Назад к списку</Button>
         </div>
 
+        <Card className="max-w-2xl mx-auto mb-6">
+          <CardHeader>
+            <CardTitle>Быстрый поиск рейса</CardTitle>
+            <CardDescription>
+              Введите номер рейса и дату для автоматического заполнения данных
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Form {...lookupForm}>
+              <form onSubmit={lookupForm.handleSubmit(onLookup)} className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={lookupForm.control}
+                    name="lookup_flight_number"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Номер рейса</FormLabel>
+                        <FormControl>
+                          <Input placeholder="SU1234" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={lookupForm.control}
+                    name="lookup_date"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Дата рейса</FormLabel>
+                        <FormControl>
+                          <Input type="date" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                {lookupError && (
+                  <Alert variant="destructive" className="mt-4">
+                    <InfoIcon className="h-4 w-4" />
+                    <AlertTitle>Ошибка</AlertTitle>
+                    <AlertDescription>{lookupError}</AlertDescription>
+                  </Alert>
+                )}
+
+                <div className="flex justify-end">
+                  <Button type="submit" disabled={isLookingUp}>
+                    {isLookingUp ? (
+                      <>
+                        <LoaderIcon className="mr-2 h-4 w-4 animate-spin" />
+                        Поиск...
+                      </>
+                    ) : (
+                      <>
+                        <SearchIcon className="mr-2 h-4 w-4" />
+                        Найти рейс
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </form>
+            </Form>
+          </CardContent>
+        </Card>
+
         <Card className="max-w-2xl mx-auto">
           <CardHeader>
             <CardTitle>Новый рейс</CardTitle>
             <CardDescription>
-              Заполните информацию о рейсе
+              Заполните информацию о рейсе или используйте быстрый поиск выше
             </CardDescription>
           </CardHeader>
           <CardContent>
