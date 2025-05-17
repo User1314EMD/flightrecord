@@ -10,14 +10,14 @@ import { toast } from "sonner";
 import dynamic from 'next/dynamic';
 
 // Динамический импорт компонентов UI
-const Form = dynamic(() => import("../../src/components/ui/form").then(mod => mod.Form), { ssr: false });
-const FormControl = dynamic(() => import("../../src/components/ui/form").then(mod => mod.FormControl), { ssr: false });
-const FormField = dynamic(() => import("../../src/components/ui/form").then(mod => mod.FormField), { ssr: false });
-const FormItem = dynamic(() => import("../../src/components/ui/form").then(mod => mod.FormItem), { ssr: false });
-const FormLabel = dynamic(() => import("../../src/components/ui/form").then(mod => mod.FormLabel), { ssr: false });
-const FormMessage = dynamic(() => import("../../src/components/ui/form").then(mod => mod.FormMessage), { ssr: false });
-const Input = dynamic(() => import("../../src/components/ui/input").then(mod => mod.Input), { ssr: false });
-const Button = dynamic(() => import("../../src/components/ui/button").then(mod => mod.Button), { ssr: false });
+const Form = dynamic(() => import("@/src/components/ui/form").then(mod => mod.Form), { ssr: false });
+const FormControl = dynamic(() => import("@/src/components/ui/form").then(mod => mod.FormControl), { ssr: false });
+const FormField = dynamic(() => import("@/src/components/ui/form").then(mod => mod.FormField), { ssr: false });
+const FormItem = dynamic(() => import("@/src/components/ui/form").then(mod => mod.FormItem), { ssr: false });
+const FormLabel = dynamic(() => import("@/src/components/ui/form").then(mod => mod.FormLabel), { ssr: false });
+const FormMessage = dynamic(() => import("@/src/components/ui/form").then(mod => mod.FormMessage), { ssr: false });
+const Input = dynamic(() => import("@/src/components/ui/input").then(mod => mod.Input), { ssr: false });
+const Button = dynamic(() => import("@/src/components/ui/button").then(mod => mod.Button), { ssr: false });
 
 // Схема валидации формы регистрации
 const registerSchema = z.object({
@@ -30,17 +30,23 @@ const registerSchema = z.object({
   password: z.string().min(6, {
     message: "Пароль должен содержать не менее 6 символов",
   }),
+  confirmPassword: z.string().min(6, {
+    message: "Пароль должен содержать не менее 6 символов",
+  }),
+}).refine((data) => data.password === data.confirmPassword, {
+  message: "Пароли не совпадают",
+  path: ["confirmPassword"],
 });
 
 type RegisterFormValues = z.infer<typeof registerSchema>;
 
 // Импортируем контекст аутентификации
-import { useAuth } from "../../src/context/AuthContext";
+import { useAuth } from "@/src/context/AuthContext";
 
 export default function RegisterPage() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
-  const { setUser } = useAuth();
+  const { signUp } = useAuth();
 
   // Инициализация формы с валидацией
   const form = useForm<RegisterFormValues>({
@@ -49,6 +55,7 @@ export default function RegisterPage() {
       name: "",
       email: "",
       password: "",
+      confirmPassword: "",
     },
   });
 
@@ -57,18 +64,13 @@ export default function RegisterPage() {
     setIsLoading(true);
 
     try {
-      // Динамический импорт функции регистрации
-      const { registerUser } = await import("../../src/lib/firebase/auth");
-      await registerUser(data.email, data.password, data.name);
+      console.log("Начинаем регистрацию с данными:", { email: data.email, name: data.name });
 
-      // Импортируем функцию для получения пользователя
-      const { getCurrentUser } = await import("../../src/lib/firebase/auth");
-      const user = await getCurrentUser();
+      // Вызываем функцию регистрации из контекста аутентификации
+      await signUp(data.email, data.password, data.name);
+      console.log("Регистрация выполнена успешно");
 
-      // Устанавливаем пользователя в контекст
-      setUser(user);
-
-      toast.success("Регистрация успешна!");
+      toast.success("Регистрация выполнена успешно!");
 
       // Перенаправляем на страницу рейсов
       router.push("/flights");
@@ -76,10 +78,16 @@ export default function RegisterPage() {
       console.error("Ошибка при регистрации:", error);
 
       // Обработка ошибок Firebase
-      if (error.code === "auth/email-already-in-use") {
+      if (error.message.includes("auth/email-already-in-use")) {
         toast.error("Этот email уже используется");
+      } else if (error.message.includes("auth/invalid-email")) {
+        toast.error("Некорректный email");
+      } else if (error.message.includes("auth/weak-password")) {
+        toast.error("Слишком слабый пароль");
+      } else if (error.message.includes("auth/network-request-failed")) {
+        toast.error("Ошибка сети. Проверьте подключение к интернету.");
       } else {
-        toast.error("Ошибка при регистрации. Пожалуйста, попробуйте снова.");
+        toast.error(`Ошибка при регистрации: ${error.message || 'Неизвестная ошибка'}`);
       }
     } finally {
       setIsLoading(false);
@@ -134,6 +142,20 @@ export default function RegisterPage() {
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Пароль</FormLabel>
+                  <FormControl>
+                    <Input placeholder="******" type="password" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="confirmPassword"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Подтверждение пароля</FormLabel>
                   <FormControl>
                     <Input placeholder="******" type="password" {...field} />
                   </FormControl>

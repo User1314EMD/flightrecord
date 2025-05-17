@@ -180,29 +180,38 @@ export default function AddFlightPage() {
       if (!data.departure_date || !data.departure_time) {
         departure_time_local = new Date();
       } else {
-        departure_time_local = new Date(`${data.departure_date}T${data.departure_time}`);
+        try {
+          departure_time_local = new Date(`${data.departure_date}T${data.departure_time}`);
+          if (isNaN(departure_time_local.getTime())) {
+            console.warn("Некорректная дата вылета, используем текущую дату");
+            departure_time_local = new Date();
+          }
+        } catch (e) {
+          console.warn("Ошибка при парсинге даты вылета:", e);
+          departure_time_local = new Date();
+        }
       }
 
       if (!data.arrival_date || !data.arrival_time) {
         arrival_time_local = new Date(departure_time_local.getTime() + 3600000); // +1 час
       } else {
-        arrival_time_local = new Date(`${data.arrival_date}T${data.arrival_time}`);
-      }
-
-      // Проверяем валидность дат
-      if (isNaN(departure_time_local.getTime())) {
-        departure_time_local = new Date();
-      }
-
-      if (isNaN(arrival_time_local.getTime())) {
-        arrival_time_local = new Date(departure_time_local.getTime() + 3600000); // +1 час
+        try {
+          arrival_time_local = new Date(`${data.arrival_date}T${data.arrival_time}`);
+          if (isNaN(arrival_time_local.getTime())) {
+            console.warn("Некорректная дата прилета, используем дату вылета + 1 час");
+            arrival_time_local = new Date(departure_time_local.getTime() + 3600000);
+          }
+        } catch (e) {
+          console.warn("Ошибка при парсинге даты прилета:", e);
+          arrival_time_local = new Date(departure_time_local.getTime() + 3600000);
+        }
       }
 
       // Временно используем UTC для часовых поясов
       const departure_timezone = "UTC";
       const arrival_timezone = "UTC";
 
-      // Создаем объект рейса
+      // Создаем объект рейса с проверкой на пустые значения
       const flightData = {
         flight_number: data.flight_number || "TEST123",
         airline: data.airline || "Тестовая авиакомпания",
@@ -219,15 +228,87 @@ export default function AddFlightPage() {
 
       console.log("Данные рейса для сохранения:", flightData);
 
-      // Импортируем функцию для добавления в Firebase
-      const { addLocalFlight } = await import("../../../src/lib/firebase-adapter");
+      try {
+        // Импортируем функции для работы с Firebase
+        const { addLocalFlight } = await import("../../../src/lib/firebase-adapter");
+        const { checkFirebaseConnection } = await import("../../../src/lib/firebase/config");
 
-      // Добавляем рейс в Firebase
-      const flightId = await addLocalFlight(flightData);
-      console.log("Рейс успешно добавлен с ID:", flightId);
+        // Проверяем подключение к Firebase
+        console.log("Проверяем подключение к Firebase...");
+        const isConnected = await checkFirebaseConnection();
 
-      toast.success("Рейс успешно добавлен");
-      router.push("/flights");
+        if (isConnected) {
+          console.log("Firebase доступен, добавляем рейс...");
+
+          // Добавляем рейс в Firebase
+          const flightId = await addLocalFlight(flightData);
+
+          // Проверяем, является ли ID локальным (если Firebase недоступен)
+          if (flightId.startsWith("local_")) {
+            console.log("Рейс сохранен локально с ID:", flightId);
+            toast.success("Рейс сохранен локально (Firebase недоступен)");
+          } else {
+            console.log("Рейс успешно добавлен в Firebase с ID:", flightId);
+            toast.success("Рейс успешно добавлен");
+          }
+
+          // Перенаправляем на страницу рейсов
+          router.push("/flights");
+        } else {
+          console.warn("Firebase недоступен, сохраняем рейс локально...");
+
+          // Генерируем локальный ID
+          const localId = "local_" + Math.random().toString(36).substring(2, 15);
+          console.log("Сохраняем рейс локально с ID:", localId);
+
+          // Сохраняем рейс в localStorage
+          try {
+            const localFlights = JSON.parse(localStorage.getItem("localFlights") || "[]");
+            localFlights.push({
+              ...flightData,
+              id: localId,
+              created_at: new Date(),
+              updated_at: new Date()
+            });
+            localStorage.setItem("localFlights", JSON.stringify(localFlights));
+
+            toast.warning("Firebase недоступен. Рейс сохранен локально.");
+
+            // Перенаправляем на страницу рейсов
+            router.push("/flights");
+          } catch (localStorageError) {
+            console.error("Ошибка при сохранении в localStorage:", localStorageError);
+            toast.error("Не удалось сохранить рейс локально.");
+          }
+        }
+      } catch (firebaseError: any) {
+        console.error("Ошибка при работе с Firebase:", firebaseError);
+
+        // Пытаемся сохранить рейс локально как запасной вариант
+        try {
+          // Генерируем локальный ID
+          const localId = "local_" + Math.random().toString(36).substring(2, 15);
+          console.log("Сохраняем рейс локально с ID:", localId);
+
+          // Сохраняем рейс в localStorage
+          const localFlights = JSON.parse(localStorage.getItem("localFlights") || "[]");
+          localFlights.push({
+            ...flightData,
+            id: localId,
+            created_at: new Date(),
+            updated_at: new Date()
+          });
+          localStorage.setItem("localFlights", JSON.stringify(localFlights));
+
+          toast.warning("Ошибка Firebase. Рейс сохранен локально.");
+
+          // Перенаправляем на страницу рейсов
+          router.push("/flights");
+        } catch (localError) {
+          console.error("Ошибка при локальном сохранении:", localError);
+          toast.error("Не удалось сохранить рейс ни в Firebase, ни локально.");
+        }
+      }
     } catch (error: any) {
       console.error("Ошибка при добавлении рейса:", error);
       // Показываем более подробную ошибку
@@ -507,7 +588,14 @@ export default function AddFlightPage() {
                       type="submit"
                       disabled={isSubmitting}
                     >
-                      {isSubmitting ? "Сохранение..." : "Сохранить рейс"}
+                      {isSubmitting ? (
+                        <>
+                          <LoaderIcon className="mr-2 h-4 w-4 animate-spin" />
+                          Сохранение...
+                        </>
+                      ) : (
+                        "Сохранить рейс"
+                      )}
                     </Button>
                   </div>
                 </div>

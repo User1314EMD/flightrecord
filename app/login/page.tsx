@@ -10,14 +10,14 @@ import { toast } from "sonner";
 import dynamic from 'next/dynamic';
 
 // Динамический импорт компонентов UI
-const Form = dynamic(() => import("../../src/components/ui/form").then(mod => mod.Form), { ssr: false });
-const FormControl = dynamic(() => import("../../src/components/ui/form").then(mod => mod.FormControl), { ssr: false });
-const FormField = dynamic(() => import("../../src/components/ui/form").then(mod => mod.FormField), { ssr: false });
-const FormItem = dynamic(() => import("../../src/components/ui/form").then(mod => mod.FormItem), { ssr: false });
-const FormLabel = dynamic(() => import("../../src/components/ui/form").then(mod => mod.FormLabel), { ssr: false });
-const FormMessage = dynamic(() => import("../../src/components/ui/form").then(mod => mod.FormMessage), { ssr: false });
-const Input = dynamic(() => import("../../src/components/ui/input").then(mod => mod.Input), { ssr: false });
-const Button = dynamic(() => import("../../src/components/ui/button").then(mod => mod.Button), { ssr: false });
+const Form = dynamic(() => import("@/src/components/ui/form").then(mod => mod.Form), { ssr: false });
+const FormControl = dynamic(() => import("@/src/components/ui/form").then(mod => mod.FormControl), { ssr: false });
+const FormField = dynamic(() => import("@/src/components/ui/form").then(mod => mod.FormField), { ssr: false });
+const FormItem = dynamic(() => import("@/src/components/ui/form").then(mod => mod.FormItem), { ssr: false });
+const FormLabel = dynamic(() => import("@/src/components/ui/form").then(mod => mod.FormLabel), { ssr: false });
+const FormMessage = dynamic(() => import("@/src/components/ui/form").then(mod => mod.FormMessage), { ssr: false });
+const Input = dynamic(() => import("@/src/components/ui/input").then(mod => mod.Input), { ssr: false });
+const Button = dynamic(() => import("@/src/components/ui/button").then(mod => mod.Button), { ssr: false });
 
 // Схема валидации формы входа
 const loginSchema = z.object({
@@ -32,12 +32,12 @@ const loginSchema = z.object({
 type LoginFormValues = z.infer<typeof loginSchema>;
 
 // Импортируем контекст аутентификации
-import { useAuth } from "../../src/context/AuthContext";
+import { useAuth } from "@/src/context/AuthContext";
 
 export default function LoginPage() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
-  const { setUser } = useAuth();
+  const { signIn } = useAuth();
 
   // Инициализация формы с валидацией
   const form = useForm<LoginFormValues>({
@@ -55,16 +55,9 @@ export default function LoginPage() {
     try {
       console.log("Начинаем вход с данными:", { email: data.email });
 
-      // Динамический импорт функции аутентификации
-      const { signIn } = await import("../../src/lib/firebase/auth");
-      console.log("Функция signIn импортирована, вызываем...");
-
-      const user = await signIn(data.email, data.password);
-      console.log("Вход выполнен успешно, получен пользователь:", user);
-
-      // Устанавливаем пользователя в контекст
-      setUser(user);
-      console.log("Пользователь установлен в контекст");
+      // Вызываем функцию входа из контекста аутентификации
+      await signIn(data.email, data.password);
+      console.log("Вход выполнен успешно");
 
       toast.success("Вход выполнен успешно!");
 
@@ -72,19 +65,16 @@ export default function LoginPage() {
       router.push("/flights");
     } catch (error: any) {
       console.error("Ошибка при входе:", error);
-      console.error("Тип ошибки:", typeof error);
-      console.error("Код ошибки:", error.code);
-      console.error("Сообщение ошибки:", error.message);
 
       // Обработка ошибок Firebase
-      if (error.code === "auth/invalid-credential" ||
-          error.code === "auth/invalid-login-credentials") {
+      if (error.message.includes("auth/invalid-credential") ||
+          error.message.includes("auth/invalid-login-credentials")) {
         toast.error("Неверный email или пароль");
-      } else if (error.code === "auth/user-not-found") {
+      } else if (error.message.includes("auth/user-not-found")) {
         toast.error("Пользователь не найден");
-      } else if (error.code === "auth/wrong-password") {
+      } else if (error.message.includes("auth/wrong-password")) {
         toast.error("Неверный пароль");
-      } else if (error.code === "auth/network-request-failed") {
+      } else if (error.message.includes("auth/network-request-failed")) {
         toast.error("Ошибка сети. Проверьте подключение к интернету.");
       } else {
         toast.error(`Ошибка при входе: ${error.message || 'Неизвестная ошибка'}`);

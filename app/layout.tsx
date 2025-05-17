@@ -11,10 +11,10 @@ const inter = Inter({
 });
 
 // Импорт компонентов
-import { AuthProvider } from '../src/context/AuthContext';
-import { Toaster } from '../src/components/ui/sonner';
-import { ThemeProvider } from '../src/components/ThemeProvider';
-import ClientComponents from '../src/components/ClientComponents';
+import { AuthProvider } from '@/src/context/AuthContext';
+import { Toaster } from '@/src/components/ui/sonner';
+import { ThemeProvider } from '@/src/components/ThemeProvider';
+import ClientComponents from '@/src/components/ClientComponents';
 
 export const metadata: Metadata = {
   title: 'FlightRecord - Приложение для хранения и обмена информацией о рейсах',

@@ -5,10 +5,10 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
 
-import ProtectedRoute from "../../src/components/ProtectedRoute";
-import { Button } from "../../src/components/ui/button";
-import { useAuth } from "../../src/context/AuthContext";
-import { Flight } from "../../src/types";
+import ProtectedRoute from "@/src/components/ProtectedRoute";
+import { Button } from "@/src/components/ui/button";
+import { useAuth } from "@/src/context/AuthContext";
+import { Flight } from "@/src/types";
 import {
   Table,
   TableBody,
@@ -16,7 +16,7 @@ import {
   TableHead,
   TableHeader,
   TableRow
-} from "../../src/components/ui/table";
+} from "@/src/components/ui/table";
 import {
   Card,
   CardContent,
@@ -24,9 +24,9 @@ import {
   CardFooter,
   CardHeader,
   CardTitle
-} from "../../src/components/ui/card";
+} from "@/src/components/ui/card";
 import { PlusCircle, Loader2, Upload, User as UserIcon, BarChart2 } from "lucide-react";
-import FlightFilters from "../../src/components/flights/FlightFilters";
+import FlightFilters from "@/src/components/flights/FlightFilters";
 
 export default function FlightsPage() {
   const router = useRouter();
@@ -34,6 +34,21 @@ export default function FlightsPage() {
   const [flights, setFlights] = useState<Flight[]>([]);
   const [filteredFlights, setFilteredFlights] = useState<Flight[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingTimeout, setLoadingTimeout] = useState(false);
+
+  useEffect(() => {
+    // Устанавливаем таймаут для загрузки - если загрузка длится более 5 секунд,
+    // считаем, что данных нет и показываем соответствующее сообщение
+    const timeoutId = setTimeout(() => {
+      if (loading) {
+        console.log("Таймаут загрузки - прекращаем ожидание");
+        setLoadingTimeout(true);
+        setLoading(false);
+      }
+    }, 5000); // 5 секунд таймаут
+
+    return () => clearTimeout(timeoutId);
+  }, [loading]);
 
   useEffect(() => {
     const loadFlights = async () => {
@@ -41,21 +56,61 @@ export default function FlightsPage() {
 
       try {
         setLoading(true);
+        setLoadingTimeout(false);
+        console.log("Начинаем загрузку рейсов...");
 
         // Импортируем функции для работы с Firebase
-        const { getLocalUserFlights, initializeTestData } = await import("../../src/lib/firebase-adapter");
+        const { getLocalUserFlights, initializeTestData } = await import("@/src/lib/firebase-adapter");
 
-        // Инициализируем тестовые данные, если нет рейсов
-        await initializeTestData(user.uid);
+        try {
+          // Получаем рейсы из Firebase
+          console.log("Получаем рейсы пользователя...");
+          const userFlights = await getLocalUserFlights(user.uid);
+          console.log(`Получено ${userFlights.length} рейсов`);
 
-        // Получаем рейсы из Firebase
-        const userFlights = await getLocalUserFlights(user.uid);
-        setFlights(userFlights);
-        setFilteredFlights(userFlights);
+          // Если у пользователя нет рейсов, инициализируем тестовые данные
+          if (userFlights.length === 0) {
+            console.log("Рейсов нет, инициализируем тестовые данные...");
+
+            try {
+              // Инициализируем тестовые данные
+              await initializeTestData(user.uid);
+              console.log("Тестовые данные инициализированы");
+
+              // Получаем рейсы снова после инициализации
+              console.log("Получаем рейсы после инициализации...");
+              const initializedFlights = await getLocalUserFlights(user.uid);
+              console.log(`Получено ${initializedFlights.length} рейсов после инициализации`);
+
+              setFlights(initializedFlights);
+              setFilteredFlights(initializedFlights);
+            } catch (initError) {
+              console.error("Ошибка при инициализации тестовых данных:", initError);
+              // Даже если инициализация не удалась, мы все равно показываем пустой список
+              setFlights([]);
+              setFilteredFlights([]);
+            }
+          } else {
+            // Если рейсы уже есть, просто устанавливаем их
+            console.log("Устанавливаем полученные рейсы");
+            setFlights(userFlights);
+            setFilteredFlights(userFlights);
+          }
+        } catch (firebaseError) {
+          console.error("Ошибка при работе с Firebase:", firebaseError);
+          // Если Firebase не работает, устанавливаем пустые массивы
+          setFlights([]);
+          setFilteredFlights([]);
+          toast.error("Не удалось получить данные из Firebase");
+        }
       } catch (error) {
         console.error("Ошибка при загрузке рейсов:", error);
         toast.error("Не удалось загрузить рейсы");
+        // В случае ошибки устанавливаем пустые массивы, чтобы не показывать загрузку бесконечно
+        setFlights([]);
+        setFilteredFlights([]);
       } finally {
+        console.log("Загрузка завершена");
         setLoading(false);
       }
     };
@@ -73,7 +128,7 @@ export default function FlightsPage() {
 
     try {
       // Импортируем функцию для удаления из Firebase
-      const { deleteLocalFlight } = await import("../../src/lib/firebase-adapter");
+      const { deleteLocalFlight } = await import("@/src/lib/firebase-adapter");
 
       // Удаляем рейс из Firebase
       await deleteLocalFlight(flightId);
@@ -141,6 +196,16 @@ export default function FlightsPage() {
               <div className="flex justify-center items-center py-10">
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
                 <span className="ml-2">Загрузка рейсов...</span>
+              </div>
+            ) : loadingTimeout ? (
+              <div className="text-center py-10">
+                <p className="text-lg mb-4">Не удалось загрузить рейсы. Возможно, проблемы с подключением к Firebase.</p>
+                <Button
+                  onClick={() => window.location.reload()}
+                  variant="outline"
+                >
+                  Попробовать снова
+                </Button>
               </div>
             ) : flights.length === 0 ? (
               <div className="text-center py-10">

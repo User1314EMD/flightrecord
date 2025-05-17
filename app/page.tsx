@@ -7,13 +7,13 @@ import { toast } from "sonner";
 import dynamic from 'next/dynamic';
 
 // Динамический импорт компонентов
-const Button = dynamic(() => import("../src/components/ui/button").then(mod => mod.Button), { ssr: false });
+const Button = dynamic(() => import("@/src/components/ui/button").then(mod => mod.Button), { ssr: false });
 
 // Ленивый импорт контекста аутентификации
-import { useAuth } from "../src/context/AuthContext";
+import { useAuth } from "@/src/context/AuthContext";
 
 export default function Home() {
-  const { user, loading, setUser } = useAuth();
+  const { user, loading, signOut } = useAuth();
   const router = useRouter();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
@@ -21,15 +21,11 @@ export default function Home() {
   const handleSignOut = async () => {
     setIsLoggingOut(true);
     try {
-      // Динамический импорт функции выхода
-      const { signOut } = await import("../src/lib/firebase/auth");
+      // Используем функцию signOut из контекста аутентификации
       await signOut();
 
       // Сохраняем состояние в localStorage
       localStorage.setItem('auth_state', 'logged_out');
-
-      // Обновляем состояние пользователя в контексте
-      setUser(null);
 
       toast.success("Вы вышли из аккаунта");
     } catch (error) {

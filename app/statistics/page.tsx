@@ -19,23 +19,23 @@ import {
   Line
 } from "recharts";
 
-import ProtectedRoute from "../../src/components/ProtectedRoute";
-import { Button } from "../../src/components/ui/button";
-import { useAuth } from "../../src/context/AuthContext";
-import { Flight } from "../../src/types";
+import ProtectedRoute from "@/src/components/ProtectedRoute";
+import { Button } from "@/src/components/ui/button";
+import { useAuth } from "@/src/context/AuthContext";
+import { Flight } from "@/src/types";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle
-} from "../../src/components/ui/card";
+} from "@/src/components/ui/card";
 import {
   Tabs,
   TabsContent,
   TabsList,
   TabsTrigger
-} from "../../src/components/ui/tabs";
+} from "@/src/components/ui/tabs";
 import { Loader2, BarChart2 } from "lucide-react";
 
 // Цвета для графиков
@@ -49,6 +49,21 @@ export default function StatisticsPage() {
   const { user } = useAuth();
   const [flights, setFlights] = useState<Flight[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingTimeout, setLoadingTimeout] = useState(false);
+
+  useEffect(() => {
+    // Устанавливаем таймаут для загрузки - если загрузка длится более 5 секунд,
+    // считаем, что данных нет и показываем соответствующее сообщение
+    const timeoutId = setTimeout(() => {
+      if (loading) {
+        console.log("Таймаут загрузки статистики - прекращаем ожидание");
+        setLoadingTimeout(true);
+        setLoading(false);
+      }
+    }, 5000); // 5 секунд таймаут
+
+    return () => clearTimeout(timeoutId);
+  }, [loading]);
 
   useEffect(() => {
     const loadFlights = async () => {
@@ -56,27 +71,43 @@ export default function StatisticsPage() {
 
       try {
         setLoading(true);
+        setLoadingTimeout(false);
+        console.log("Начинаем загрузку данных для статистики...");
 
         // Импортируем функцию для получения рейсов из Firebase
-        const { getLocalUserFlights } = await import("../../src/lib/firebase-adapter");
+        const { getLocalUserFlights } = await import("@/src/lib/firebase-adapter");
 
-        // Получаем рейсы пользователя из Firebase
-        const userFlights = await getLocalUserFlights(user.uid);
+        try {
+          // Получаем рейсы пользователя из Firebase
+          console.log("Получаем рейсы пользователя для статистики...");
+          const userFlights = await getLocalUserFlights(user.uid);
+          console.log(`Получено ${userFlights.length} рейсов для статистики`);
 
-        // Сортируем рейсы по дате вылета (от новых к старым)
-        const sortedFlights = [...userFlights].sort(
-          (a, b) => b.departure_time_local.getTime() - a.departure_time_local.getTime()
-        );
+          // Сортируем рейсы по дате вылета (от новых к старым)
+          const sortedFlights = [...userFlights].sort(
+            (a, b) => b.departure_time_local.getTime() - a.departure_time_local.getTime()
+          );
 
-        setFlights(sortedFlights);
+          setFlights(sortedFlights);
+        } catch (firebaseError) {
+          console.error("Ошибка при работе с Firebase:", firebaseError);
+          // Если Firebase не работает, устанавливаем пустой массив
+          setFlights([]);
+          toast.error("Не удалось получить данные из Firebase");
+        }
       } catch (error) {
         console.error("Ошибка при загрузке рейсов:", error);
         toast.error("Не удалось загрузить данные рейсов");
+        // В случае ошибки устанавливаем пустой массив, чтобы не показывать загрузку бесконечно
+        setFlights([]);
       } finally {
+        // В любом случае завершаем загрузку
+        console.log("Загрузка данных для статистики завершена");
         setLoading(false);
       }
     };
 
+    // Запускаем загрузку данных
     loadFlights();
   }, [user]);
 
@@ -234,6 +265,22 @@ export default function StatisticsPage() {
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
             <span className="ml-2">Загрузка данных...</span>
           </div>
+        ) : loadingTimeout ? (
+          <Card>
+            <CardHeader>
+              <CardTitle>Не удалось загрузить данные</CardTitle>
+              <CardDescription>
+                Возможно, проблемы с подключением к Firebase
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="text-center py-10">
+              <BarChart2 className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
+              <p className="mb-4">Попробуйте обновить страницу</p>
+              <Button onClick={() => window.location.reload()}>
+                Обновить страницу
+              </Button>
+            </CardContent>
+          </Card>
         ) : flights.length === 0 ? (
           <Card>
             <CardHeader>
