@@ -3,6 +3,55 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { motion } from "framer-motion";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+  LineChart,
+  Line
+} from "recharts";
+import { Button } from "@/src/components/ui/button";
+import { useAuth } from "@/src/context/AuthContext";
+import { Flight } from "@/src/types";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle
+} from "@/src/components/ui/card";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger
+} from "@/src/components/ui/tabs";
+import { Loader2, BarChart2 } from "lucide-react";
+import dynamic from 'next/dynamic';
+
+const ProtectedRouteWrapper = dynamic(
+  () => import('@/src/components/ProtectedRoute').then(mod => mod.default),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="flex justify-center items-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+      </div>
+    )
+  }
+);
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
+import { motion } from "framer-motion";
 import {
   BarChart,
   Bar,
@@ -39,9 +88,39 @@ import {
 import { Loader2, BarChart2 } from "lucide-react";
 
 // Цвета для графиков
+// Animation variants
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.1
+    }
+  }
+};
+
+const itemVariants = {
+  hidden: { y: 20, opacity: 0 },
+  visible: {
+    y: 0,
+    opacity: 1,
+    transition: {
+      duration: 0.5
+    }
+  }
+};
+
+// Colors for charts using CSS variables
 const COLORS = [
-  "#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884D8",
-  "#82CA9D", "#FF6B6B", "#6B66FF", "#FFD166", "#06D6A0"
+  "rgb(var(--primary))",
+  "rgb(var(--secondary))",
+  "#00C49F",
+  "#FFBB28",
+  "#FF8042",
+  "#8884D8",
+  "#82CA9D",
+  "#FF6B6B",
+  "#6B66FF"
 ];
 
 export default function StatisticsPage() {
@@ -247,7 +326,12 @@ export default function StatisticsPage() {
 
   return (
     <ProtectedRoute>
-      <main className="container mx-auto py-10 px-4">
+      <motion.main
+        className="container mx-auto py-10 px-4"
+        initial="hidden"
+        animate="visible"
+        variants={containerVariants}
+      >
         <div className="flex justify-between items-center mb-8">
           <h1 className="text-3xl font-bold">Статистика полетов</h1>
           <div className="flex gap-4">
@@ -261,12 +345,16 @@ export default function StatisticsPage() {
         </div>
 
         {loading ? (
-          <div className="flex justify-center items-center py-20">
+          <motion.div
+            variants={itemVariants}
+            className="flex justify-center items-center py-20"
+          >
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
             <span className="ml-2">Загрузка данных...</span>
-          </div>
+          </motion.div>
         ) : loadingTimeout ? (
-          <Card>
+          <motion.div variants={itemVariants}>
+            <Card>
             <CardHeader>
               <CardTitle>Не удалось загрузить данные</CardTitle>
               <CardDescription>
@@ -281,8 +369,13 @@ export default function StatisticsPage() {
               </Button>
             </CardContent>
           </Card>
+          </motion.div>
+          </motion.div>
+          </motion.div>
+          </motion.div>
         ) : flights.length === 0 ? (
-          <Card>
+          <motion.div variants={itemVariants}>
+            <Card>
             <CardHeader>
               <CardTitle>Нет данных</CardTitle>
               <CardDescription>
@@ -298,9 +391,10 @@ export default function StatisticsPage() {
             </CardContent>
           </Card>
         ) : (
-          <div className="space-y-8">
+          <motion.div variants={containerVariants} className="space-y-8">
             {/* Общая статистика */}
-            <Card>
+            <motion.div variants={itemVariants}>
+              <Card>
               <CardHeader>
                 <CardTitle>Общая статистика</CardTitle>
                 <CardDescription>
@@ -326,7 +420,8 @@ export default function StatisticsPage() {
             </Card>
 
             {/* Графики */}
-            <Tabs defaultValue="airlines">
+            <motion.div variants={itemVariants}>
+              <Tabs defaultValue="airlines">
               <TabsList className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 mb-4">
                 <TabsTrigger value="airlines">Авиакомпании</TabsTrigger>
                 <TabsTrigger value="routes">Маршруты</TabsTrigger>
@@ -564,9 +659,11 @@ export default function StatisticsPage() {
                 </Card>
               </TabsContent>
             </Tabs>
+          </motion.div>
+          </motion.div>
           </div>
         )}
-      </main>
+      </motion.main>
     </ProtectedRoute>
   );
 }

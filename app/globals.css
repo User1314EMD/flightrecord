@@ -1,18 +1,23 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+@tailwind animate;
 
 :root {
-  --foreground-rgb: 0, 0, 0;
-  --background-start-rgb: 214, 219, 220;
-  --background-end-rgb: 255, 255, 255;
+  --foreground-rgb: 23, 23, 23;
+  --background-start-rgb: 248, 250, 252;
+  --background-end-rgb: 241, 245, 249;
+  --primary: 59, 130, 246;
+  --secondary: 139, 92, 246;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --foreground-rgb: 255, 255, 255;
-    --background-start-rgb: 0, 0, 0;
-    --background-end-rgb: 0, 0, 0;
+    --foreground-rgb: 229, 229, 229;
+    --background-start-rgb: 17, 24, 39;
+    --background-end-rgb: 31, 41, 55;
+    --primary: 96, 165, 250;
+    --secondary: 167, 139, 250;
   }
 }
 
@@ -24,4 +29,41 @@ body {
       rgb(var(--background-end-rgb))
     )
     rgb(var(--background-start-rgb));
+}
+
+/* Smooth transitions */
+* {
+  @apply transition-colors duration-200;
+}
+
+/* Typography improvements */
+h1 {
+  @apply text-3xl font-bold tracking-tight;
+}
+h2 {
+  @apply text-2xl font-semibold;
+}
+h3 {
+  @apply text-xl font-medium;
+}
+
+/* Buttons */
+button {
+  @apply px-4 py-2 rounded-lg font-medium;
+}
+button.primary {
+  @apply bg-blue-500 text-white hover:bg-blue-600;
+}
+button.secondary {
+  @apply bg-purple-500 text-white hover:bg-purple-600;
+}
+
+/* Inputs */
+input, textarea, select {
+  @apply px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500;
+}
+
+/* Cards */
+.card {
+  @apply p-6 bg-white dark:bg-gray-800 rounded-xl shadow-sm hover:shadow-md;
 }
